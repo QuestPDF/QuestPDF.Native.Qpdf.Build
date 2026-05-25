@@ -177,13 +177,13 @@ jobs:
       - name: Copy build artifact (Linux)
         if: startsWith(matrix.runtime.name, 'linux-')
         shell: bash
-        run: cp qpdf/build/libqpdf/libqpdf.so.30.2.0 output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.so
+        run: cp qpdf/build/libqpdf/libqpdf.so.30.3.2 output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.so
 
 
       - name: Copy build artifact (OSX)
         if: startsWith(matrix.runtime.name, 'osx-')
         shell: bash
-        run: cp qpdf/build/libqpdf/libqpdf.30.2.0.dylib output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
+        run: cp qpdf/build/libqpdf/libqpdf.30.3.2.dylib output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
 
 
       - name: Copy C++ runtime dependencies (Windows x64)
