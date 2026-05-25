@@ -5,8 +5,6 @@ Environment.CurrentDirectory = AppContext.BaseDirectory;
 var libraryVersion = API.GetQpdfVersion();
 Console.WriteLine(libraryVersion);
 
-API.qpdf_init();
-
 RunTest("page_selection_job.json");
 RunTest("password_job.json");
 RunTest("attachment_job.json");
@@ -28,10 +26,7 @@ static void RunTest(string jobFile)
 static class API
 {
     const string LibraryName = "qpdf";
-    
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr qpdf_init();
-    
+
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr qpdf_get_qpdf_version();
     
