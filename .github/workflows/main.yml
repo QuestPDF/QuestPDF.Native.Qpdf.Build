@@ -17,23 +17,23 @@ jobs:
       fail-fast: false
       matrix:
         runtime:
-        - name: win-x64
-          runs-on: windows-latest-xlarge
-        - name: win-x86
-          runs-on: windows-latest-xlarge
+        # - name: win-x64
+        #   runs-on: windows-latest-xlarge
+        # - name: win-x86
+        #   runs-on: windows-latest-xlarge
         - name: linux-x64
           runs-on: ubuntu-latest-xlarge
           container: quay.io/pypa/manylinux_2_28_x86_64
         - name: linux-arm64
           runs-on: ubuntu-latest-xlarge-arm64
           container: quay.io/pypa/manylinux_2_28_aarch64
-        - name: linux-musl-x64
-          runs-on: ubuntu-latest-xlarge
-          container: alpine:3.17
-        - name: osx-x64
-          runs-on: macos-latest-large
-        - name: osx-arm64
-          runs-on: macos-latest-xlarge
+        # - name: linux-musl-x64
+        #   runs-on: ubuntu-latest-xlarge
+        #   container: alpine:3.17
+        # - name: osx-x64
+        #   runs-on: macos-latest-large
+        # - name: osx-arm64
+        #   runs-on: macos-latest-xlarge
 
     steps:
       - uses: actions/checkout@v4
@@ -114,7 +114,7 @@ jobs:
           # Each `run:` block gets a fresh shell, so we re-source it here.
           source /opt/rh/gcc-toolset-*/enable
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="-Os -s -static-libstdc++ -static-libgcc"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="-Os -s"
           cmake --build build --parallel --target libqpdf
 
 
