@@ -101,7 +101,7 @@ jobs:
       - name: Download QPDF
         shell: bash
         run: |
-          git clone --branch 12.3 --single-branch https://github.com/QuestPDF/QuestPDF.Native.Qpdf.Build
+          git clone --branch 12.3 --single-branch https://github.com/QuestPDF/QuestPDF.Native.Qpdf
           cd qpdf
           git apply ../*.patch
           mkdir build
