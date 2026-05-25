@@ -189,7 +189,6 @@ jobs:
           
 
       - name: Setup .NET 6.0 SDK
-        if: matrix.runtime.name != 'linux-musl-x64'
         shell: bash
         run: |
           curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
