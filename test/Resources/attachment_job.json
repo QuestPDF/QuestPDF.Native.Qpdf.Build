@@ -1,0 +1,16 @@
+{
+  "inputFile": "input_pdfa_3b.pdf",
+  "outputFile": "output_attachment.pdf",
+  "newlineBeforeEndstream": "",
+  "extendMetadata": "{{metadata}}",
+  "addAttachment": [
+    {
+      "key": "factur-zugfred",
+      "file": "zugfred.xml",
+      "filename": "factur-x.xml",
+      "mimetype": "text/xml",
+      "relationship": "/Source",
+      "description": "Factur-X Invoice"
+    }
+  ]
+}

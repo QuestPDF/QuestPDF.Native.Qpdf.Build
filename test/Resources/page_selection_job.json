@@ -1,0 +1,10 @@
+{
+  "inputFile": "input_normal.pdf",
+  "outputFile": "output_page_selection.pdf",
+  "pages": [
+    {
+      "file": ".",
+      "range": "2-4"
+    }
+  ]
+}
