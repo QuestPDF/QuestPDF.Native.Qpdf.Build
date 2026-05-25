@@ -54,7 +54,7 @@ jobs:
         run: |
           apk update
           apk upgrade
-          apk add bash wget git build-base cmake pkgconf g++ sudo icu-libs zlib zlib-dev
+          apk add bash wget curl git build-base cmake pkgconf g++ sudo icu-libs zlib zlib-dev
           adduser $(whoami) wheel
 
 
