@@ -23,10 +23,10 @@ jobs:
           runs-on: windows-latest-xlarge
         - name: linux-x64
           runs-on: ubuntu-latest-xlarge
-          container: ubuntu:19.04
+          container: quay.io/pypa/manylinux2014_x86_64
         - name: linux-arm64
           runs-on: ubuntu-latest-xlarge-arm64
-          container: ubuntu:19.04
+          container: quay.io/pypa/manylinux2014_aarch64
         - name: linux-musl-x64
           runs-on: ubuntu-latest-xlarge
           container: alpine:3.17
@@ -43,37 +43,13 @@ jobs:
 
 
       - name: Install Dependencies (Linux)
-        if: matrix.runtime.name == 'linux-x64'
-        shell: bash
-        run: |
-          cat > /etc/apt/sources.list << EOF
-          deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
-          deb http://security.ubuntu.com/ubuntu focal-security main restricted universe multiverse
-          EOF
-
-
-      - name: Install Dependencies (Linux ARM)
-        if: matrix.runtime.name == 'linux-arm64'
-        shell: bash
-        run: |
-          cat > /etc/apt/sources.list << EOF
-          deb http://ports.ubuntu.com/ubuntu-ports/ focal main restricted universe multiverse
-          deb http://ports.ubuntu.com/ubuntu-ports/ focal-updates main restricted universe multiverse
-          deb http://ports.ubuntu.com/ubuntu-ports/ focal-backports main restricted universe multiverse
-          deb http://ports.ubuntu.com/ubuntu-ports/ focal-security main restricted universe multiverse
-          EOF
-
-
-      - name: Install Dependencies (Linux)
         if: matrix.runtime.name == 'linux-x64' || matrix.runtime.name == 'linux-arm64'
         shell: bash
         run: |
-          apt update --yes
-          apt upgrade --yes
-          apt install wget git make gcc g++ build-essential pkg-config zlib1g zlib1g-dev sudo --yes
-          usermod -aG sudo $(whoami)
+          yum install -y wget git make pkgconfig zlib zlib-devel
+          # gcc/g++/make are preinstalled; devtoolset-10 (GCC 10) is used for the actual build.
+          # cmake3 ships in the manylinux2014 image with a `cmake` symlink — verify:
+          cmake --version
 
           
       - name: Install Dependencies (Linux MUSL)
@@ -85,19 +61,6 @@ jobs:
           adduser $(whoami) wheel
 
 
-      - name: Download and install cmake (Linux)
-        if: matrix.runtime.name == 'linux-x64' || matrix.runtime.name == 'linux-arm64'
-        shell: bash
-        run: |
-          wget https://github.com/Kitware/CMake/releases/download/v3.29.9/cmake-3.29.9.tar.gz
-          tar -zxvf cmake-3.29.9.tar.gz
-          cd cmake-3.29.9
-          ./bootstrap -- -DCMAKE_USE_OPENSSL=OFF
-          make -j$(nproc)
-          sudo make install
-          sudo ln -s /usr/local/bin/cmake /usr/bin/cmake
-
-          
       - name: Download QPDF
         shell: bash
         run: |
@@ -149,8 +112,13 @@ jobs:
         if: startsWith(matrix.runtime.name, 'linux-')
         shell: bash
         run: |
+          # Activate devtoolset-10 (GCC 10) for C++20 support on manylinux2014.
+          # On Alpine (linux-musl-x64) the file doesn't exist, so guard the source.
+          if [ -f /opt/rh/devtoolset-10/enable ]; then
+            source /opt/rh/devtoolset-10/enable
+          fi
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_INCLUDE_PATH=/usr/local/include -DCMAKE_LIBRARY_PATH=/usr/local/lib64 -DCMAKE_CXX_FLAGS="-Os -s"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="-Os -s -static-libstdc++ -static-libgcc"
           cmake --build build --parallel --target libqpdf
 
 
@@ -216,10 +184,18 @@ jobs:
 
 
       - name: Setup .NET 8.0 SDK
-        if: matrix.runtime.name != 'win-x86'
+        if: matrix.runtime.name != 'win-x86' && matrix.runtime.name != 'linux-x64' && matrix.runtime.name != 'linux-arm64'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+
+      - name: Install .NET 8.0 SDK (manylinux2014)
+        if: matrix.runtime.name == 'linux-x64' || matrix.runtime.name == 'linux-arm64'
+        shell: bash
+        run: |
+          curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
+          echo "$HOME/.dotnet" >> $GITHUB_PATH
 
 
       - name: Install .NET 8 SDK (x86) and pin env (win-x86 only)
