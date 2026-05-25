@@ -188,11 +188,11 @@ jobs:
           path: output
 
 
-      - name: Setup .NET 8.0 SDK
+      - name: Setup .NET 6.0 SDK
         if: matrix.runtime.name != 'win-x86'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '6.0.x'
 
 
       - name: Install .NET 8 SDK (x86) and pin env (win-x86 only)
