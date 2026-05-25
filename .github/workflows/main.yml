@@ -17,23 +17,23 @@ jobs:
       fail-fast: false
       matrix:
         runtime:
-        # - name: win-x64
-        #   runs-on: windows-latest-xlarge
-        # - name: win-x86
-        #   runs-on: windows-latest-xlarge
-        # - name: linux-x64
-        #   runs-on: ubuntu-latest-xlarge
-        #   container: quay.io/pypa/manylinux_2_28_x86_64
-        # - name: linux-arm64
-        #   runs-on: ubuntu-latest-xlarge-arm64
-        #   container: quay.io/pypa/manylinux_2_28_aarch64
+        - name: win-x64
+          runs-on: windows-latest-xlarge
+        - name: win-x86
+          runs-on: windows-latest-xlarge
+        - name: linux-x64
+          runs-on: ubuntu-latest-xlarge
+          container: quay.io/pypa/manylinux_2_28_x86_64
+        - name: linux-arm64
+          runs-on: ubuntu-latest-xlarge-arm64
+          container: quay.io/pypa/manylinux_2_28_aarch64
         - name: linux-musl-x64
           runs-on: ubuntu-latest-xlarge
           container: alpine:3.13
-        # - name: osx-x64
-        #   runs-on: macos-latest-large
-        # - name: osx-arm64
-        #   runs-on: macos-latest-xlarge
+        - name: osx-x64
+          runs-on: macos-latest-large
+        - name: osx-arm64
+          runs-on: macos-latest-xlarge
 
     steps:
       - uses: actions/checkout@v4
@@ -186,22 +186,22 @@ jobs:
         with:
           name: questpdf-native-libraries-${{ matrix.runtime.name }}
           path: output
-
+          
 
       - name: Setup .NET 6.0 SDK
-        if: matrix.runtime.name != 'win-x86'
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '6.0.x'
-
-
-      - name: Install .NET 8 SDK (x86) and pin env (win-x86 only)
-        if: matrix.runtime.name == 'win-x86'
-        shell: powershell
+        if: matrix.runtime.name != 'linux-musl-x64'
+        shell: bash
         run: |
-          $InstallDir = "$env:RUNNER_TEMP\dotnet-x86"
-          iwr https://dot.net/v1/dotnet-install.ps1 -OutFile $env:RUNNER_TEMP\dotnet-install.ps1
-          & $env:RUNNER_TEMP\dotnet-install.ps1 -Channel 8.0 -Architecture x86 -InstallDir $InstallDir
+          curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
+          if [[ "${{ matrix.runtime.name }}" == "win-x86" ]]; then
+            INSTALL_DIR="$RUNNER_TEMP/dotnet-x86"
+            bash /tmp/dotnet-install.sh --channel 6.0 --architecture x86 --install-dir "$INSTALL_DIR"
+          else
+            INSTALL_DIR="$HOME/.dotnet"
+            bash /tmp/dotnet-install.sh --channel 6.0 --install-dir "$INSTALL_DIR"
+            echo "$INSTALL_DIR" >> $GITHUB_PATH
+            echo "DOTNET_ROOT=$INSTALL_DIR" >> $GITHUB_ENV
+          fi
 
 
       - name: Test build artifacts
