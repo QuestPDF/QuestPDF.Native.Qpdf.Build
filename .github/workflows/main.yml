@@ -54,7 +54,7 @@ jobs:
         run: |
           apk update
           apk upgrade
-          apk add bash wget git build-base cmake pkgconf g++ sudo icu-libs zlib zlib-dev
+          apk add bash wget curl git build-base cmake pkgconf g++ sudo icu-libs zlib zlib-dev
           adduser $(whoami) wheel
 
 
@@ -186,35 +186,47 @@ jobs:
         with:
           name: questpdf-native-libraries-${{ matrix.runtime.name }}
           path: output
-          
 
-      - name: Setup .NET 6.0 SDK
+      
+      - name: Setup .NET 6.0 SDK (Windows)
+        if: startsWith(matrix.runtime.name, 'win-')
+        shell: pwsh
+        run: |
+          $arch = "${{ matrix.runtime.name }}".Replace("win-", "")
+      
+          $script = "$env:RUNNER_TEMP\dotnet-install.ps1"
+          $installDir = "$env:RUNNER_TEMP\dotnet-$arch"
+      
+          Invoke-WebRequest -Uri https://dot.net/v1/dotnet-install.ps1 -OutFile $script
+          & $script -Channel 6.0 -Architecture $arch -InstallDir $installDir
+      
+          Add-Content -Path $env:GITHUB_PATH -Value $installDir
+          Add-Content -Path $env:GITHUB_ENV -Value "DOTNET_ROOT=$installDir"
+
+      
+      - name: Setup .NET 6.0 SDK (Unix)
+        if: startsWith(matrix.runtime.name, 'win-') == false
         shell: bash
         run: |
           curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-          if [[ "${{ matrix.runtime.name }}" == "win-x86" ]]; then
-            INSTALL_DIR="$RUNNER_TEMP/dotnet-x86"
-            bash /tmp/dotnet-install.sh --channel 6.0 --architecture x86 --install-dir "$INSTALL_DIR"
-          else
-            INSTALL_DIR="$HOME/.dotnet"
-            bash /tmp/dotnet-install.sh --channel 6.0 --install-dir "$INSTALL_DIR"
-            echo "$INSTALL_DIR" >> $GITHUB_PATH
-            echo "DOTNET_ROOT=$INSTALL_DIR" >> $GITHUB_ENV
-          fi
+          INSTALL_DIR="$HOME/.dotnet"
+          bash /tmp/dotnet-install.sh --channel 6.0 --install-dir "$INSTALL_DIR"
+          echo "$INSTALL_DIR" >> $GITHUB_PATH
+          echo "DOTNET_ROOT=$INSTALL_DIR" >> $GITHUB_ENV
 
 
       - name: Test build artifacts
         shell: bash
         run: |
-          TEST_EXECUTION_PATH='test/bin/Debug/net8.0/${{ matrix.runtime.name }}'
+          TEST_EXECUTION_PATH='test/bin/Debug/net6.0/${{ matrix.runtime.name }}'
           mkdir -p "$TEST_EXECUTION_PATH"
 
           # This now copies qpdf.dll AND all its dependencies into the test folder
           cp -R output/runtimes/${{ matrix.runtime.name }}/native/* "$TEST_EXECUTION_PATH"
 
           cd test
-          dotnet build --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
-          dotnet run --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
+          dotnet build --framework net6.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
+          dotnet run --framework net6.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
           cd ../
 
           mkdir -p testOutput/${{ matrix.runtime.name }}
