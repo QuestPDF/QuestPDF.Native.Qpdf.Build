@@ -11,6 +11,8 @@ RunTest("attachment_job.json");
 
 static void RunTest(string jobFile)
 {
+    Console.WriteLine("Running test: " + jobFile);
+    
     var job = File.ReadAllText(jobFile);
     
     var metadata = File.ReadAllText("zugfred_metadata.txt");
