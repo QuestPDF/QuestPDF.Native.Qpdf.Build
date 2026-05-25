@@ -5,6 +5,8 @@ Environment.CurrentDirectory = AppContext.BaseDirectory;
 var libraryVersion = API.GetQpdfVersion();
 Console.WriteLine(libraryVersion);
 
+API.qpdf_init();
+
 RunTest("page_selection_job.json");
 RunTest("password_job.json");
 RunTest("attachment_job.json");
@@ -17,12 +19,10 @@ static void RunTest(string jobFile)
     metadata = metadata.Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "");
     job = job.Replace("{{metadata}}", metadata);
 
-    API.qpdf_init();
-
     var jobHandle = API.qpdfjob_init();
     API.qpdfjob_initialize_from_json(jobHandle, job);
     API.qpdfjob_run(jobHandle);
-    API.qpdfjob_cleanup(jobHandle);
+    API.qpdfjob_cleanup(ref jobHandle);
 }
 
 static class API
@@ -39,7 +39,7 @@ static class API
     public static extern IntPtr qpdfjob_init();
     
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void qpdfjob_cleanup(IntPtr jobHandle);
+    public static extern void qpdfjob_cleanup(ref IntPtr jobHandle);
     
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int qpdfjob_initialize_from_json(IntPtr jobHandle, string json);
