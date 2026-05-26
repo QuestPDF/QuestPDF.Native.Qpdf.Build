@@ -221,7 +221,6 @@ jobs:
           TEST_EXECUTION_PATH='integration-test/bin/Debug/net6.0/${{ matrix.runtime.name }}'
           mkdir -p "$TEST_EXECUTION_PATH"
 
-          # This now copies qpdf.dll AND all its dependencies into the integration-test folder
           cp -R output/runtimes/${{ matrix.runtime.name }}/native/* "$TEST_EXECUTION_PATH"
 
           cd integration-test
