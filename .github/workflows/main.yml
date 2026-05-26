@@ -29,7 +29,10 @@ jobs:
           container: quay.io/pypa/manylinux_2_28_aarch64
         - name: linux-musl-x64
           runs-on: ubuntu-latest-xlarge
-          container: alpine:3.13
+          container: quay.io/pypa/musllinux_1_2_x86_64
+        - name: linux-musl-arm64
+          runs-on: ubuntu-latest-xlarge-arm64
+          container: quay.io/pypa/musllinux_1_2_aarch64
         - name: osx-x64
           runs-on: macos-latest-large
         - name: osx-arm64
