@@ -21,6 +21,8 @@ jobs:
           runs-on: windows-latest-xlarge
         - name: win-x86
           runs-on: windows-latest-xlarge
+        - name: win-arm64
+          runs-on: windows-latest-xlarge-arm64
         - name: linux-x64
           runs-on: ubuntu-latest-xlarge
           container: quay.io/pypa/manylinux_2_28_x86_64
@@ -93,6 +95,20 @@ jobs:
             mingw-w64-i686-gcc
             mingw-w64-i686-pkgconf
             mingw-w64-i686-zlib
+            make
+
+
+      - name: Install MSYS2 (Windows arm64)
+        if: matrix.runtime.name == 'win-arm64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >
+            mingw-w64-clang-aarch64-toolchain
+            mingw-w64-clang-aarch64-cmake
+            mingw-w64-clang-aarch64-pkgconf
+            mingw-w64-clang-aarch64-zlib
             make
 
 
@@ -181,6 +197,17 @@ jobs:
              output/runtimes/${{ matrix.runtime.name }}/native/
 
 
+      - name: Copy C++ runtime dependencies (Windows arm64)
+        if: matrix.runtime.name == 'win-arm64'
+        shell: msys2 {0}
+        run: |
+          cp /clangarm64/bin/libc++.dll \
+             /clangarm64/bin/libunwind.dll \
+             /clangarm64/bin/libwinpthread-1.dll \
+             /clangarm64/bin/zlib1.dll \
+             output/runtimes/${{ matrix.runtime.name }}/native/
+
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -188,7 +215,7 @@ jobs:
           path: output
 
       
-      - name: Setup .NET 6.0 SDK (Windows)
+      - name: Setup .NET 8.0 SDK (Windows)
         if: startsWith(matrix.runtime.name, 'win-')
         shell: pwsh
         run: |
@@ -198,19 +225,19 @@ jobs:
           $installDir = "$env:RUNNER_TEMP\dotnet-$arch"
       
           Invoke-WebRequest -Uri https://dot.net/v1/dotnet-install.ps1 -OutFile $script
-          & $script -Channel 6.0 -Architecture $arch -InstallDir $installDir
+          & $script -Channel 8.0 -Architecture $arch -InstallDir $installDir
       
           Add-Content -Path $env:GITHUB_PATH -Value $installDir
           Add-Content -Path $env:GITHUB_ENV -Value "DOTNET_ROOT=$installDir"
 
       
-      - name: Setup .NET 6.0 SDK (Unix)
+      - name: Setup .NET 8.0 SDK (Unix)
         if: startsWith(matrix.runtime.name, 'win-') == false
         shell: bash
         run: |
           curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
           INSTALL_DIR="$HOME/.dotnet"
-          bash /tmp/dotnet-install.sh --channel 6.0 --install-dir "$INSTALL_DIR"
+          bash /tmp/dotnet-install.sh --channel 8.0 --install-dir "$INSTALL_DIR"
           echo "$INSTALL_DIR" >> $GITHUB_PATH
           echo "DOTNET_ROOT=$INSTALL_DIR" >> $GITHUB_ENV
 
@@ -218,14 +245,14 @@ jobs:
       - name: Test build artifacts
         shell: bash
         run: |
-          TEST_EXECUTION_PATH='integration-test/bin/Debug/net6.0/${{ matrix.runtime.name }}'
+          TEST_EXECUTION_PATH='integration-test/bin/Debug/net8.0/${{ matrix.runtime.name }}'
           mkdir -p "$TEST_EXECUTION_PATH"
 
           cp -R output/runtimes/${{ matrix.runtime.name }}/native/* "$TEST_EXECUTION_PATH"
 
           cd integration-test
-          dotnet build --framework net6.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
-          dotnet run --framework net6.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
+          dotnet build --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
+          dotnet run --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
           cd ../
 
           mkdir -p testOutput/${{ matrix.runtime.name }}
