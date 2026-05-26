@@ -21,6 +21,8 @@ jobs:
           runs-on: windows-latest-xlarge
         - name: win-x86
           runs-on: windows-latest-xlarge
+        - name: win-arm64
+          runs-on: windows-latest-xlarge-arm64
         - name: linux-x64
           runs-on: ubuntu-latest-xlarge
           container: quay.io/pypa/manylinux_2_28_x86_64
@@ -93,6 +95,20 @@ jobs:
             mingw-w64-i686-gcc
             mingw-w64-i686-pkgconf
             mingw-w64-i686-zlib
+            make
+
+
+      - name: Install MSYS2 (Windows arm64)
+        if: matrix.runtime.name == 'win-arm64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >
+            mingw-w64-clang-aarch64-toolchain
+            mingw-w64-clang-aarch64-cmake
+            mingw-w64-clang-aarch64-pkgconf
+            mingw-w64-clang-aarch64-zlib
             make
 
 
@@ -178,6 +194,17 @@ jobs:
              /mingw32/bin/libstdc++-6.dll \
              /mingw32/bin/libwinpthread-1.dll \
              /mingw32/bin/zlib1.dll \
+             output/runtimes/${{ matrix.runtime.name }}/native/
+
+
+      - name: Copy C++ runtime dependencies (Windows arm64)
+        if: matrix.runtime.name == 'win-arm64'
+        shell: msys2 {0}
+        run: |
+          cp /clangarm64/bin/libc++.dll \
+             /clangarm64/bin/libunwind.dll \
+             /clangarm64/bin/libwinpthread-1.dll \
+             /clangarm64/bin/zlib1.dll \
              output/runtimes/${{ matrix.runtime.name }}/native/
 
 
