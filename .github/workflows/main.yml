@@ -32,7 +32,7 @@ jobs:
           container: quay.io/pypa/musllinux_1_2_x86_64
         - name: linux-musl-arm64
           runs-on: ubuntu-latest-xlarge-arm64
-          container: quay.io/pypa/musllinux_1_2_aarch64
+          container: alpine:3.17
         - name: osx-x64
           runs-on: macos-latest-large
         - name: osx-arm64
