@@ -218,13 +218,13 @@ jobs:
       - name: Test build artifacts
         shell: bash
         run: |
-          TEST_EXECUTION_PATH='test/bin/Debug/net6.0/${{ matrix.runtime.name }}'
+          TEST_EXECUTION_PATH='integration-test/bin/Debug/net6.0/${{ matrix.runtime.name }}'
           mkdir -p "$TEST_EXECUTION_PATH"
 
-          # This now copies qpdf.dll AND all its dependencies into the test folder
+          # This now copies qpdf.dll AND all its dependencies into the integration-test folder
           cp -R output/runtimes/${{ matrix.runtime.name }}/native/* "$TEST_EXECUTION_PATH"
 
-          cd test
+          cd integration-test
           dotnet build --framework net6.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
           dotnet run --framework net6.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
           cd ../
