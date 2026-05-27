@@ -6,10 +6,18 @@ namespace QuestPDF.Qpdf;
 
 static class QpdfAPI
 {
-    public static string? GetQpdfVersion()
+    const int ExpectedNativeLibraryVersion = 2;
+    
+    public static bool IsCorrectVersionLoaded()
     {
-        var ptr = API.qpdf_get_qpdf_version();
-        return Marshal.PtrToStringAnsi(ptr);
+        try
+        {
+            return API.get_questpdf_version() == ExpectedNativeLibraryVersion;
+        }
+        catch
+        {
+            return false;
+        }
     }
     
     public static void ExecuteJob(string jobJson)
@@ -73,7 +81,7 @@ static class QpdfAPI
         /* GENERAL */
         
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr qpdf_get_qpdf_version();
+        public static extern int get_questpdf_version();
     
         /* JOBS */
         

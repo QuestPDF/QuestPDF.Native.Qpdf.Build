@@ -2,8 +2,8 @@ using QuestPDF.Qpdf;
 
 Environment.CurrentDirectory = AppContext.BaseDirectory;
 
-var libraryVersion = QpdfAPI.GetQpdfVersion();
-Console.WriteLine(libraryVersion);
+if(!QpdfAPI.IsCorrectVersionLoaded())
+    throw new Exception("Incorrect version of the library loaded");
 
 RunTest("page_selection_job.json");
 RunTest("password_job.json");
