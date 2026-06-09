@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  QPDF_BRANCH: 12.3 
+  QPDF_BRANCH: "12.3"
 
 jobs:
   main:
@@ -42,6 +42,7 @@ jobs:
 
     env:
       MACOSX_DEPLOYMENT_TARGET: "12.0"
+      QPDF_CXX_FLAGS: "-Os -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden"
 
     steps:
       - uses: actions/checkout@v4
@@ -78,14 +79,14 @@ jobs:
         if: matrix.runtime.name == 'win-x64'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           update: true
           install: >
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-zlib
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-zlib
             make
 
 
@@ -123,7 +124,7 @@ jobs:
         shell: msys2 {0}
         run: |
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON  -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="-Os -s"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-static -Wl,--gc-sections -s"
           cmake --build build --parallel --target libqpdf
 
 
@@ -136,7 +137,7 @@ jobs:
           # Each `run:` block gets a fresh shell, so we re-source it here.
           source /opt/rh/gcc-toolset-*/enable
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="-Os -s"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -Wl,--exclude-libs,ALL -s"
           cmake --build build --parallel --target libqpdf
 
 
@@ -145,7 +146,7 @@ jobs:
         shell: bash
         run: |
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_INCLUDE_PATH=/usr/local/include -DCMAKE_LIBRARY_PATH=/usr/local/lib64 -DCMAKE_CXX_FLAGS="-Os -s"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_INCLUDE_PATH=/usr/local/include -DCMAKE_LIBRARY_PATH=/usr/local/lib64 -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -Wl,--exclude-libs,ALL -s"
           cmake --build build --parallel --target libqpdf
 
 
@@ -154,7 +155,7 @@ jobs:
         shell: bash
         run: |
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON  -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="-Os -s"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-dead_strip"
           cmake --build build --parallel --target libqpdf
 
 
@@ -166,52 +167,25 @@ jobs:
       - name: Copy build artifact (Windows)
         if: startsWith(matrix.runtime.name, 'win-')
         shell: bash
-        run: cp qpdf/build/libqpdf/qpdf30.dll output/runtimes/${{ matrix.runtime.name }}/native/qpdf.dll
+        run: cp qpdf/build/libqpdf/qpdf*.dll output/runtimes/${{ matrix.runtime.name }}/native/qpdf.dll
 
 
       - name: Copy build artifact (Linux)
         if: startsWith(matrix.runtime.name, 'linux-')
         shell: bash
-        run: cp qpdf/build/libqpdf/libqpdf.so.30.3.2 output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.so
+        run: cp -L qpdf/build/libqpdf/libqpdf.so output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.so
 
 
       - name: Copy build artifact (OSX)
         if: startsWith(matrix.runtime.name, 'osx-')
         shell: bash
-        run: cp qpdf/build/libqpdf/libqpdf.30.3.2.dylib output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
+        run: cp -L qpdf/build/libqpdf/libqpdf.dylib output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
 
 
-      - name: Copy C++ runtime dependencies (Windows x64)
-        if: matrix.runtime.name == 'win-x64'
-        shell: msys2 {0}
-        run: |
-          cp /mingw64/bin/libgcc_s_seh-1.dll \
-             /mingw64/bin/libstdc++-6.dll \
-             /mingw64/bin/libwinpthread-1.dll \
-             /mingw64/bin/zlib1.dll \
-             output/runtimes/${{ matrix.runtime.name }}/native/
-
-
-      - name: Copy C++ runtime dependencies (Windows x86)
-        if: matrix.runtime.name == 'win-x86'
-        shell: msys2 {0}
-        run: |
-          cp /mingw32/bin/libgcc_s_dw2-1.dll \
-             /mingw32/bin/libstdc++-6.dll \
-             /mingw32/bin/libwinpthread-1.dll \
-             /mingw32/bin/zlib1.dll \
-             output/runtimes/${{ matrix.runtime.name }}/native/
-
-
-      - name: Copy C++ runtime dependencies (Windows arm64)
-        if: matrix.runtime.name == 'win-arm64'
-        shell: msys2 {0}
-        run: |
-          cp /clangarm64/bin/libc++.dll \
-             /clangarm64/bin/libunwind.dll \
-             /clangarm64/bin/libwinpthread-1.dll \
-             /clangarm64/bin/zlib1.dll \
-             output/runtimes/${{ matrix.runtime.name }}/native/
+      - name: Strip symbols (OSX)
+        if: startsWith(matrix.runtime.name, 'osx-')
+        shell: bash
+        run: strip -x output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
 
 
       - name: Upload build artifacts
@@ -220,23 +194,23 @@ jobs:
           name: questpdf-native-libraries-${{ matrix.runtime.name }}
           path: output
 
-      
+
       - name: Setup .NET 8.0 SDK (Windows)
         if: startsWith(matrix.runtime.name, 'win-')
         shell: pwsh
         run: |
           $arch = "${{ matrix.runtime.name }}".Replace("win-", "")
-      
+
           $script = "$env:RUNNER_TEMP\dotnet-install.ps1"
           $installDir = "$env:RUNNER_TEMP\dotnet-$arch"
-      
+
           Invoke-WebRequest -Uri https://dot.net/v1/dotnet-install.ps1 -OutFile $script
           & $script -Channel 8.0 -Architecture $arch -InstallDir $installDir
-      
+
           Add-Content -Path $env:GITHUB_PATH -Value $installDir
           Add-Content -Path $env:GITHUB_ENV -Value "DOTNET_ROOT=$installDir"
 
-      
+
       - name: Setup .NET 8.0 SDK (Unix)
         if: startsWith(matrix.runtime.name, 'win-') == false
         shell: bash
