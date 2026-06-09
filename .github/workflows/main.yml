@@ -6,6 +6,9 @@ permissions:
 on:
   workflow_dispatch:
 
+env:
+  QPDF_BRANCH: 12.3 
+
 jobs:
   main:
     name: ${{ matrix.runtime.name }}
@@ -18,24 +21,27 @@ jobs:
       matrix:
         runtime:
         - name: win-x64
-          runs-on: windows-latest-xlarge
+          runs-on: windows-latest
         - name: win-x86
-          runs-on: windows-latest-xlarge
+          runs-on: windows-latest
         - name: win-arm64
-          runs-on: windows-latest-xlarge-arm64
+          runs-on: windows-11-arm
         - name: linux-x64
-          runs-on: ubuntu-latest-xlarge
+          runs-on: ubuntu-latest
           container: quay.io/pypa/manylinux_2_28_x86_64
         - name: linux-arm64
-          runs-on: ubuntu-latest-xlarge-arm64
+          runs-on: ubuntu-24.04-arm
           container: quay.io/pypa/manylinux_2_28_aarch64
         - name: linux-musl-x64
-          runs-on: ubuntu-latest-xlarge
+          runs-on: ubuntu-latest
           container: alpine:3.17
         - name: osx-x64
-          runs-on: macos-latest-large
+          runs-on: macos-26-intel
         - name: osx-arm64
-          runs-on: macos-latest-xlarge
+          runs-on: macos-latest
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "12.0"
 
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +69,7 @@ jobs:
       - name: Download QPDF
         shell: bash
         run: |
-          git clone --branch 12.3 --single-branch https://github.com/QuestPDF/QuestPDF.Native.Qpdf qpdf
+          git clone --branch "$QPDF_BRANCH" --single-branch https://github.com/QuestPDF/QuestPDF.Native.Qpdf qpdf
           cd qpdf
           mkdir build
 
