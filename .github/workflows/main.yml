@@ -124,7 +124,15 @@ jobs:
         shell: msys2 {0}
         run: |
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-static -Wl,--gc-sections -s"
+
+          # required for win-x86 build
+          LINKER_FLAGS="-static -Wl,--gc-sections -s"
+          
+          if [ "${{ matrix.runtime.name }}" = "win-x86" ]; then
+            LINKER_FLAGS="$LINKER_FLAGS -Wl,-u,__mingw_SEH_error_handler"
+          fi
+
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="$LINKER_FLAGS"
           cmake --build build --parallel --target libqpdf
 
 
