@@ -90,24 +90,44 @@ jobs:
             make
 
 
+      - name: Install MSYS2 (Windows x86)
+        id: msys2-win-x86
+        if: matrix.runtime.name == 'win-x86'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: false
+          install: >
+            mingw-w64-i686-toolchain
+            mingw-w64-i686-cmake
+            mingw-w64-i686-gcc
+            mingw-w64-i686-pkgconf
+            mingw-w64-i686-zlib
+            make
+
+
       - name: Pin MSYS2 CRT (Windows x86)
         if: matrix.runtime.name == 'win-x86'
-        shell: msys2 {0}
+        shell: pwsh
         run: |
-          set -euxo pipefail
+          $ErrorActionPreference = "Stop"
 
-          # Temporary workaround for the MinGW32 CRT regression introduced after 2026-06-10.
-          # The newer i686 CRT pulls i386__beginthreadex.o from libmsvcrt.a, which currently
-          # fails to resolve __mingw_SEH_error_handler when building qpdf.dll with -static.
-          pacman --noconfirm -U \
-            https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-headers-14.0.0.r92.g818fa6510-1-any.pkg.tar.zst \
-            https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-crt-14.0.0.r92.g818fa6510-1-any.pkg.tar.zst
+          $msys2 = "${{ steps.msys2-win-x86.outputs.msys2-location }}"
+          $bash = Join-Path $msys2 "usr\bin\bash.exe"
 
-          pacman -Q \
-            mingw-w64-i686-gcc \
-            mingw-w64-i686-binutils \
-            mingw-w64-i686-headers \
-            mingw-w64-i686-crt
+          & $bash -lc @'
+            set -euxo pipefail
+
+            pacman --noconfirm -U \
+              https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-headers-14.0.0.r92.g818fa6510-1-any.pkg.tar.zst \
+              https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-crt-14.0.0.r92.g818fa6510-1-any.pkg.tar.zst
+
+            pacman -Q \
+              mingw-w64-i686-gcc \
+              mingw-w64-i686-binutils \
+              mingw-w64-i686-headers \
+              mingw-w64-i686-crt
+          '@
 
 
       - name: Install MSYS2 (Windows arm64)
