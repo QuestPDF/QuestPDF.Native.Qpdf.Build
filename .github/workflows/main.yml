@@ -106,30 +106,6 @@ jobs:
             make
 
 
-      - name: Pin MSYS2 CRT (Windows x86)
-        if: matrix.runtime.name == 'win-x86'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $msys2 = "${{ steps.msys2-win-x86.outputs.msys2-location }}"
-          $bash = Join-Path $msys2 "usr\bin\bash.exe"
-
-          & $bash -lc @'
-            set -euxo pipefail
-
-            pacman --noconfirm -U \
-              https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-headers-14.0.0.r92.g818fa6510-1-any.pkg.tar.zst \
-              https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-crt-14.0.0.r92.g818fa6510-1-any.pkg.tar.zst
-
-            pacman -Q \
-              mingw-w64-i686-gcc \
-              mingw-w64-i686-binutils \
-              mingw-w64-i686-headers \
-              mingw-w64-i686-crt
-          '@
-
-
       - name: Install MSYS2 (Windows arm64)
         if: matrix.runtime.name == 'win-arm64'
         uses: msys2/setup-msys2@v2
@@ -149,7 +125,28 @@ jobs:
         shell: msys2 {0}
         run: |
           cd qpdf
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-static -Wl,--gc-sections -s"
+
+          linkerFlags="-static -Wl,--gc-sections -s"
+
+          if [ "${{ matrix.runtime.name }}" = "win-x86" ]; then
+            # Workaround for current MSYS2/MinGW32 i686 static link issue:
+            # libmsvcrt.a(i386__beginthreadex.o) references __mingw_SEH_error_handler,
+            # but the required libgcc object is not pulled in automatically.
+            #
+            # On i686 COFF, the actual symbol is normally decorated as:
+            # ___mingw_SEH_error_handler
+            sehSymbol="$(i686-w64-mingw32-nm "$(i686-w64-mingw32-gcc -print-libgcc-file-name)" | awk '/mingw_SEH_error_handler/ && / T / {print $3; exit}')"
+
+            if [ -z "$sehSymbol" ]; then
+              echo "Unable to find mingw_SEH_error_handler in libgcc."
+              exit 1
+            fi
+
+            echo "Forcing MinGW SEH handler symbol into win-x86 link: $sehSymbol"
+            linkerFlags="$linkerFlags -Wl,-u,$sehSymbol"
+          fi
+
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="$linkerFlags"
           cmake --build build --parallel --target libqpdf
 
 
