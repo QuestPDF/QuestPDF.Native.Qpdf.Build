@@ -6,13 +6,13 @@ namespace QuestPDF.Qpdf;
 
 static class QpdfAPI
 {
-    const int ExpectedNativeLibraryVersion = 2;
+    const int ExpectedNativeLibraryVersion = 3;
     
     public static bool IsCorrectVersionLoaded()
     {
         try
         {
-            return API.get_questpdf_version() == ExpectedNativeLibraryVersion;
+            return API.questpdf_get_compatibility_version() == ExpectedNativeLibraryVersion;
         }
         catch
         {
@@ -79,9 +79,12 @@ static class QpdfAPI
         const string LibraryName = "qpdf";
         
         /* GENERAL */
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int questpdf_get_compatibility_version();
         
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int get_questpdf_version();
+        public static extern int questpdf_check_compatibility_by_calculating_sum(int x, int y);
     
         /* JOBS */
         
