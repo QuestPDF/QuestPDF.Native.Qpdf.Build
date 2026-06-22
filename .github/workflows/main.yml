@@ -82,19 +82,19 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-zlib
             make
-      - name: Install MSYS2 (Windows x86)
+      - name: Install LLVM-MinGW (Windows x86)
+        # MSYS2 removed its 32-bit (i686 / MINGW32) repository in 2026, so the
+        # mingw-w64-i686-* packages can no longer be installed. Use the actively
+        # maintained llvm-mingw toolchain instead, which still targets i686.
         if: matrix.runtime.name == 'win-x86'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW32
-          update: true
-          install: >
-            mingw-w64-i686-toolchain
-            mingw-w64-i686-cmake
-            mingw-w64-i686-gcc
-            mingw-w64-i686-pkgconf
-            mingw-w64-i686-zlib
-            make
+        shell: pwsh
+        run: |
+          $version = "20260616"
+          $name = "llvm-mingw-$version-ucrt-x86_64"
+          $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$version/$name.zip"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\llvm-mingw.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\llvm-mingw.zip" -DestinationPath "$env:RUNNER_TEMP\llvm-mingw"
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:RUNNER_TEMP\llvm-mingw\$name\bin"
       - name: Install MSYS2 (Windows arm64)
         if: matrix.runtime.name == 'win-arm64'
         uses: msys2/setup-msys2@v2
@@ -108,11 +108,31 @@ jobs:
             mingw-w64-clang-aarch64-zlib
             make
       - name: Build QPDF (Windows)
-        if: startsWith(matrix.runtime.name, 'win-')
+        if: matrix.runtime.name == 'win-x64' || matrix.runtime.name == 'win-arm64'
         shell: msys2 {0}
         run: |
           cd qpdf
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-static -Wl,--gc-sections -s"
+          cmake --build build --parallel --target libqpdf
+      - name: Build QPDF (Windows x86)
+        if: matrix.runtime.name == 'win-x86'
+        shell: bash
+        run: |
+          TARGET=i686-w64-mingw32
+          # llvm-mingw does not ship zlib, so build a static libz.a for i686 to
+          # link into qpdf (mirroring what the MSYS2 zlib package provided).
+          git clone --branch v1.3.1 --depth 1 https://github.com/madler/zlib zlib-src
+          (
+            cd zlib-src
+            "$TARGET-clang" -O2 -DHAVE_HIDDEN -c \
+              adler32.c crc32.c deflate.c infback.c inffast.c inflate.c \
+              inftrees.c trees.c zutil.c compress.c uncompr.c \
+              gzclose.c gzlib.c gzread.c gzwrite.c
+            "$TARGET-ar" rcs libz.a *.o
+          )
+          ZLIB_DIR="$(cd zlib-src && pwd -W)"
+          cd qpdf
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$TARGET-clang" -DCMAKE_CXX_COMPILER="$TARGET-clang++" -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_INCLUDE_PATH="$ZLIB_DIR" -DCMAKE_LIBRARY_PATH="$ZLIB_DIR" -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-static -Wl,--gc-sections -s"
           cmake --build build --parallel --target libqpdf
       - name: Build QPDF Linux (manylinux)
         if: matrix.runtime.name == 'linux-x64' || matrix.runtime.name == 'linux-arm64'
