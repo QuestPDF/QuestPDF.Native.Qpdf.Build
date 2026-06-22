@@ -56,8 +56,6 @@ jobs:
           # dnf is idempotent, so installing them again is a no-op safety net.
           # libicu is added because the .NET 8 runtime depends on it for globalization.
           dnf install -y git wget make pkgconfig zlib-devel libicu
-
-
       - name: Install Dependencies (Linux MUSL)
         if: matrix.runtime.name == 'linux-musl-x64'
         run: |
@@ -65,16 +63,12 @@ jobs:
           apk upgrade
           apk add bash wget curl git build-base cmake pkgconf g++ sudo icu-libs zlib zlib-dev
           adduser $(whoami) wheel
-
-
       - name: Download QPDF
         shell: bash
         run: |
           git clone --branch "$QPDF_BRANCH" --single-branch https://github.com/QuestPDF/QuestPDF.Native.Qpdf qpdf
           cd qpdf
           mkdir build
-
-
       - name: Install MSYS2 (Windows x64)
         if: matrix.runtime.name == 'win-x64'
         uses: msys2/setup-msys2@v2
@@ -88,15 +82,12 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-zlib
             make
-
-
       - name: Install MSYS2 (Windows x86)
-        id: msys2-win-x86
         if: matrix.runtime.name == 'win-x86'
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW32
-          update: false
+          update: true
           install: >
             mingw-w64-i686-toolchain
             mingw-w64-i686-cmake
@@ -104,8 +95,6 @@ jobs:
             mingw-w64-i686-pkgconf
             mingw-w64-i686-zlib
             make
-
-
       - name: Install MSYS2 (Windows arm64)
         if: matrix.runtime.name == 'win-arm64'
         uses: msys2/setup-msys2@v2
@@ -118,38 +107,13 @@ jobs:
             mingw-w64-clang-aarch64-pkgconf
             mingw-w64-clang-aarch64-zlib
             make
-
-
       - name: Build QPDF (Windows)
         if: startsWith(matrix.runtime.name, 'win-')
         shell: msys2 {0}
         run: |
           cd qpdf
-
-          linkerFlags="-static -Wl,--gc-sections -s"
-
-          if [ "${{ matrix.runtime.name }}" = "win-x86" ]; then
-            # Workaround for current MSYS2/MinGW32 i686 static link issue:
-            # libmsvcrt.a(i386__beginthreadex.o) references __mingw_SEH_error_handler,
-            # but the required libgcc object is not pulled in automatically.
-            #
-            # On i686 COFF, the actual symbol is normally decorated as:
-            # ___mingw_SEH_error_handler
-            sehSymbol="$(i686-w64-mingw32-nm "$(i686-w64-mingw32-gcc -print-libgcc-file-name)" | awk '/mingw_SEH_error_handler/ && / T / {print $3; exit}')"
-
-            if [ -z "$sehSymbol" ]; then
-              echo "Unable to find mingw_SEH_error_handler in libgcc."
-              exit 1
-            fi
-
-            echo "Forcing MinGW SEH handler symbol into win-x86 link: $sehSymbol"
-            linkerFlags="$linkerFlags -Wl,-u,$sehSymbol"
-          fi
-
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="$linkerFlags"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-static -Wl,--gc-sections -s"
           cmake --build build --parallel --target libqpdf
-
-
       - name: Build QPDF Linux (manylinux)
         if: matrix.runtime.name == 'linux-x64' || matrix.runtime.name == 'linux-arm64'
         shell: bash
@@ -161,8 +125,6 @@ jobs:
           cd qpdf
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -Wl,--exclude-libs,ALL -s"
           cmake --build build --parallel --target libqpdf
-
-
       - name: Build QPDF Linux (musl)
         if: matrix.runtime.name == 'linux-musl-x64'
         shell: bash
@@ -170,8 +132,6 @@ jobs:
           cd qpdf
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_INCLUDE_PATH=/usr/local/include -DCMAKE_LIBRARY_PATH=/usr/local/lib64 -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -Wl,--exclude-libs,ALL -s"
           cmake --build build --parallel --target libqpdf
-
-
       - name: Build QPDF OSX
         if: startsWith(matrix.runtime.name, 'osx-')
         shell: bash
@@ -179,8 +139,6 @@ jobs:
           cd qpdf
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_IMPLICIT_CRYPTO=OFF -DREQUIRE_CRYPTO_NATIVE=ON -DCMAKE_CXX_FLAGS="$QPDF_CXX_FLAGS" -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-dead_strip"
           cmake --build build --parallel --target libqpdf
-
-
       - name: Create output folder
         shell: bash
         run: mkdir -p output/runtimes/${{ matrix.runtime.name }}/native
@@ -222,17 +180,12 @@ jobs:
         shell: pwsh
         run: |
           $arch = "${{ matrix.runtime.name }}".Replace("win-", "")
-
           $script = "$env:RUNNER_TEMP\dotnet-install.ps1"
           $installDir = "$env:RUNNER_TEMP\dotnet-$arch"
-
           Invoke-WebRequest -Uri https://dot.net/v1/dotnet-install.ps1 -OutFile $script
           & $script -Channel 8.0 -Architecture $arch -InstallDir $installDir
-
           Add-Content -Path $env:GITHUB_PATH -Value $installDir
           Add-Content -Path $env:GITHUB_ENV -Value "DOTNET_ROOT=$installDir"
-
-
       - name: Setup .NET 8.0 SDK (Unix)
         if: startsWith(matrix.runtime.name, 'win-') == false
         shell: bash
@@ -242,27 +195,20 @@ jobs:
           bash /tmp/dotnet-install.sh --channel 8.0 --install-dir "$INSTALL_DIR"
           echo "$INSTALL_DIR" >> $GITHUB_PATH
           echo "DOTNET_ROOT=$INSTALL_DIR" >> $GITHUB_ENV
-
-
       - name: Test build artifacts
         shell: bash
         run: |
           TEST_EXECUTION_PATH='integration-test/bin/Debug/net8.0/${{ matrix.runtime.name }}'
           mkdir -p "$TEST_EXECUTION_PATH"
-
           cp -R output/runtimes/${{ matrix.runtime.name }}/native/* "$TEST_EXECUTION_PATH"
-
           cd integration-test
           dotnet build --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
           dotnet run --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
           cd ../
-
           mkdir -p testOutput/${{ matrix.runtime.name }}
           cp $TEST_EXECUTION_PATH/output_page_selection.pdf testOutput/${{ matrix.runtime.name }}
           cp $TEST_EXECUTION_PATH/output_password.pdf testOutput/${{ matrix.runtime.name }}
           cp $TEST_EXECUTION_PATH/output_attachment.pdf testOutput/${{ matrix.runtime.name }}
-
-
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
