@@ -431,3 +431,9 @@ FodyWeavers.xsd
 # macOS Finder metadata
 .DS_Store
 **/.DS_Store
+
+# JetBrains IDE files
+.idea/
+
+# Claude Code settings
+.claude/

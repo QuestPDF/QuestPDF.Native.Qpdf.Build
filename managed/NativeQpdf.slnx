@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="NativeQpdf.Tests/NativeQpdf.Tests.csproj" />
+  <Project Path="NativeQpdf/NativeQpdf.csproj" />
+</Solution>

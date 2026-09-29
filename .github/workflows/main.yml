@@ -54,7 +54,7 @@ jobs:
         run: |
           # manylinux_2_28 ships gcc-toolset, cmake, git, wget, and make preinstalled.
           # dnf is idempotent, so installing them again is a no-op safety net.
-          # libicu is added because the .NET 8 runtime depends on it for globalization.
+          # libicu is added because the .NET runtime depends on it for globalization.
           dnf install -y git wget make pkgconfig zlib-devel libicu
 
 
@@ -195,7 +195,7 @@ jobs:
           path: output
 
 
-      - name: Setup .NET 8.0 SDK (Windows)
+      - name: Setup .NET 10.0 SDK (Windows)
         if: startsWith(matrix.runtime.name, 'win-')
         shell: pwsh
         run: |
@@ -205,19 +205,19 @@ jobs:
           $installDir = "$env:RUNNER_TEMP\dotnet-$arch"
 
           Invoke-WebRequest -Uri https://dot.net/v1/dotnet-install.ps1 -OutFile $script
-          & $script -Channel 8.0 -Architecture $arch -InstallDir $installDir
+          & $script -Channel 10.0 -Architecture $arch -InstallDir $installDir
 
           Add-Content -Path $env:GITHUB_PATH -Value $installDir
           Add-Content -Path $env:GITHUB_ENV -Value "DOTNET_ROOT=$installDir"
 
 
-      - name: Setup .NET 8.0 SDK (Unix)
+      - name: Setup .NET 10.0 SDK (Unix)
         if: startsWith(matrix.runtime.name, 'win-') == false
         shell: bash
         run: |
           curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
           INSTALL_DIR="$HOME/.dotnet"
-          bash /tmp/dotnet-install.sh --channel 8.0 --install-dir "$INSTALL_DIR"
+          bash /tmp/dotnet-install.sh --channel 10.0 --install-dir "$INSTALL_DIR"
           echo "$INSTALL_DIR" >> $GITHUB_PATH
           echo "DOTNET_ROOT=$INSTALL_DIR" >> $GITHUB_ENV
 
@@ -225,24 +225,21 @@ jobs:
       - name: Test build artifacts
         shell: bash
         run: |
-          TEST_EXECUTION_PATH='integration-test/bin/Debug/net8.0/${{ matrix.runtime.name }}'
+          TEST_EXECUTION_PATH='managed/NativeQpdf.Tests/bin/Debug/net10.0/${{ matrix.runtime.name }}'
           mkdir -p "$TEST_EXECUTION_PATH"
-
           cp -R output/runtimes/${{ matrix.runtime.name }}/native/* "$TEST_EXECUTION_PATH"
 
-          cd integration-test
-          dotnet build --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
-          dotnet run --framework net8.0 --runtime ${{ matrix.runtime.name }} --no-self-contained
-          cd ../
+          dotnet test managed --framework net10.0 --runtime ${{ matrix.runtime.name }} || TEST_RESULT=$?
 
           mkdir -p testOutput/${{ matrix.runtime.name }}
-          cp $TEST_EXECUTION_PATH/output_page_selection.pdf testOutput/${{ matrix.runtime.name }}
-          cp $TEST_EXECUTION_PATH/output_password.pdf testOutput/${{ matrix.runtime.name }}
-          cp $TEST_EXECUTION_PATH/output_attachment.pdf testOutput/${{ matrix.runtime.name }}
+          cp -R "$TEST_EXECUTION_PATH/Output/." testOutput/${{ matrix.runtime.name }}
+
+          exit ${TEST_RESULT:-0}
 
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
           name: questpdf-test-results-${{ matrix.runtime.name }}
           path: testOutput
@@ -251,8 +248,10 @@ jobs:
   merge:
     runs-on: ubuntu-latest
     needs: main
+    if: ${{ !cancelled() }}
     steps:
       - name: Merge native libraries
+        if: ${{ needs.main.result == 'success' }}
         uses: actions/upload-artifact/merge@v4
         with:
           name: questpdf-native-libraries
@@ -261,6 +260,7 @@ jobs:
 
 
       - name: Merge test results
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact/merge@v4
         with:
           name: questpdf-test-results
