@@ -167,25 +167,25 @@ jobs:
       - name: Copy build artifact (Windows)
         if: startsWith(matrix.runtime.name, 'win-')
         shell: bash
-        run: cp qpdf/build/libqpdf/qpdf*.dll output/runtimes/${{ matrix.runtime.name }}/native/qpdf.dll
+        run: cp qpdf/build/libqpdf/questpdf_qpdf.dll output/runtimes/${{ matrix.runtime.name }}/native/
 
 
       - name: Copy build artifact (Linux)
         if: startsWith(matrix.runtime.name, 'linux-')
         shell: bash
-        run: cp -L qpdf/build/libqpdf/libqpdf.so output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.so
+        run: cp qpdf/build/libqpdf/libquestpdf_qpdf.so output/runtimes/${{ matrix.runtime.name }}/native/
 
 
       - name: Copy build artifact (OSX)
         if: startsWith(matrix.runtime.name, 'osx-')
         shell: bash
-        run: cp -L qpdf/build/libqpdf/libqpdf.dylib output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
+        run: cp qpdf/build/libqpdf/libquestpdf_qpdf.dylib output/runtimes/${{ matrix.runtime.name }}/native/
 
 
       - name: Strip symbols (OSX)
         if: startsWith(matrix.runtime.name, 'osx-')
         shell: bash
-        run: strip -x output/runtimes/${{ matrix.runtime.name }}/native/libqpdf.dylib
+        run: strip -x output/runtimes/${{ matrix.runtime.name }}/native/libquestpdf_qpdf.dylib
 
 
       - name: Upload build artifacts

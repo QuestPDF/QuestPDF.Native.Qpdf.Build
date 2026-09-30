@@ -227,7 +227,7 @@ static class QpdfAPI
     
     private static class API
     {
-        const string LibraryName = "qpdf";
+        const string LibraryName = "questpdf_qpdf";
         
         /* GENERAL */
 
